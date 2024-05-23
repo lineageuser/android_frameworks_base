@@ -23,4 +23,5 @@
     <java-symbol type="string" name="build_device" />
     <java-symbol type="string" name="build_fp" />
     <java-symbol type="string" name="build_model" />
+    <java-symbol type="string" name="cert_manufacturer" />
 </resources>
