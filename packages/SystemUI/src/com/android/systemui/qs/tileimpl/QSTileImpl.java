@@ -69,7 +69,6 @@ import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.QsEventLogger;
 import com.android.systemui.qs.SideLabelTileLayout;
 import com.android.systemui.qs.logging.QSLogger;
-import com.android.systemui.statusbar.policy.KeyguardStateController;
 
 import java.io.PrintWriter;
 
@@ -268,32 +267,6 @@ public abstract class QSTileImpl<TState extends State> implements QSTile, Lifecy
      */
     public boolean isAvailable() {
         return true;
-    }
-
-    public enum Action {
-        CLICK,
-        SECONDARY_CLICK,
-        LONG_CLICK,
-    }
-
-    public boolean isAllowedWhenLocked(Action action) {
-        return false;
-    }
-
-    void handleAction(Action action, Runnable handler) {
-        if (isAllowedWhenLocked(action)) {
-            handler.run();
-            return;
-        }
-
-        KeyguardStateController ksc = mHost.getKeyguardStateController();
-        boolean hasSecureKeyguard = ksc.isMethodSecure() && ksc.isShowing();
-
-        if (hasSecureKeyguard) {
-            mActivityStarter.postQSRunnableDismissingKeyguard(handler);
-        } else {
-            handler.run();
-        }
     }
 
     // safe to call from any thread
@@ -621,19 +594,16 @@ public abstract class QSTileImpl<TState extends State> implements QSTile, Lifecy
                         mActivityStarter.postStartActivityDismissingKeyguard(intent, 0);
                     } else {
                         mQSLogger.logHandleClick(mTileSpec, msg.arg1);
-                        Expandable view = (Expandable) msg.obj;
-                        handleAction(Action.CLICK, () -> handleClick(view));
+                        handleClick((Expandable) msg.obj);
                     }
                 } else if (msg.what == SECONDARY_CLICK) {
                     name = "handleSecondaryClick";
                     mQSLogger.logHandleSecondaryClick(mTileSpec, msg.arg1);
-                    Expandable view = (Expandable) msg.obj;
-                    handleAction(Action.SECONDARY_CLICK, () -> handleSecondaryClick(view));
+                    handleSecondaryClick((Expandable) msg.obj);
                 } else if (msg.what == LONG_CLICK) {
                     name = "handleLongClick";
                     mQSLogger.logHandleLongClick(mTileSpec, msg.arg1);
-                    Expandable view = (Expandable) msg.obj;
-                    handleAction(Action.LONG_CLICK, () -> handleLongClick(view));
+                    handleLongClick((Expandable) msg.obj);
                 } else if (msg.what == REFRESH_STATE) {
                     name = "handleRefreshState";
                     handleRefreshState(msg.obj);

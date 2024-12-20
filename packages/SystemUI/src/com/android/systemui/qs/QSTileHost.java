@@ -53,7 +53,6 @@ import com.android.systemui.settings.UserFileManager;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.shade.ShadeController;
 import com.android.systemui.statusbar.phone.AutoTileManager;
-import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.tuner.TunerService;
 import com.android.systemui.tuner.TunerService.Tunable;
 import com.android.systemui.util.settings.SecureSettings;
@@ -95,7 +94,6 @@ public class QSTileHost implements QSHost, Tunable, PluginListener<QSFactory>, P
     static final String TILES = "tiles_prefs";
 
     private final Context mContext;
-    private final KeyguardStateController mKeyguardStateController;
     private final LinkedHashMap<String, QSTile> mTiles = new LinkedHashMap<>();
     private final ArrayList<String> mTileSpecs = new ArrayList<>();
     private final TunerService mTunerService;
@@ -129,7 +127,6 @@ public class QSTileHost implements QSHost, Tunable, PluginListener<QSFactory>, P
             Lazy<NewQSTileFactory> newQsTileFactoryProvider,
             QSFactory defaultFactory,
             @Main Executor mainExecutor,
-            KeyguardStateController keyguardStateController,
             PluginManager pluginManager,
             TunerService tunerService,
             Provider<AutoTileManager> autoTiles,
@@ -143,7 +140,6 @@ public class QSTileHost implements QSHost, Tunable, PluginListener<QSFactory>, P
             QSPipelineFlagsRepository featureFlags
     ) {
         mContext = context;
-        mKeyguardStateController = keyguardStateController;
         mUserContext = context;
         mTunerService = tunerService;
         mPluginManager = pluginManager;
@@ -211,11 +207,6 @@ public class QSTileHost implements QSHost, Tunable, PluginListener<QSFactory>, P
     @Override
     public void removeCallback(Callback callback) {
         mCallbacks.remove(callback);
-    }
-
-    @Override
-    public KeyguardStateController getKeyguardStateController() {
-        return mKeyguardStateController;
     }
 
     @Override
