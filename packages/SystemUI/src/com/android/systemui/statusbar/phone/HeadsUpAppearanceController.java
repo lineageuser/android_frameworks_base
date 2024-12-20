@@ -43,9 +43,9 @@ import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 import com.android.systemui.statusbar.notification.domain.interactor.HeadsUpNotificationIconInteractor;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
 import com.android.systemui.statusbar.notification.row.shared.AsyncGroupHeaderViewInflation;
-import com.android.systemui.statusbar.notification.shared.NotificationIconContainerRefactor;
 import com.android.systemui.statusbar.notification.stack.NotificationRoundnessManager;
 import com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayoutController;
+import com.android.systemui.statusbar.phone.PhoneStatusBarViewController;
 import com.android.systemui.statusbar.phone.fragment.dagger.StatusBarFragmentScope;
 import com.android.systemui.statusbar.policy.Clock;
 import com.android.systemui.statusbar.policy.HeadsUpManager;
@@ -75,7 +75,6 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
 
     private static final SourceType HEADS_UP = SourceType.from("HeadsUp");
     private static final SourceType PULSING = SourceType.from("Pulsing");
-    private final NotificationIconAreaController mNotificationIconAreaController;
     private final HeadsUpManager mHeadsUpManager;
     private final NotificationStackScrollLayoutController mStackScrollerController;
 
@@ -116,7 +115,6 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
     @VisibleForTesting
     @Inject
     public HeadsUpAppearanceController(
-            NotificationIconAreaController notificationIconAreaController,
             HeadsUpManager headsUpManager,
             StatusBarStateController stateController,
             PhoneStatusBarTransitions phoneStatusBarTransitions,
@@ -133,9 +131,9 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
             FeatureFlagsClassic featureFlags,
             HeadsUpNotificationIconInteractor headsUpNotificationIconInteractor,
             @Named(OPERATOR_NAME_FRAME_VIEW) Optional<View> operatorNameViewOptional,
-            @RootView PhoneStatusBarView statusBarView) {
+            @RootView PhoneStatusBarView statusBarView,
+            PhoneStatusBarViewController statusBarViewController) {
         super(headsUpStatusBarView);
-        mNotificationIconAreaController = notificationIconAreaController;
         mNotificationRoundnessManager = notificationRoundnessManager;
         mHeadsUpManager = headsUpManager;
 
@@ -156,7 +154,7 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
         mClockView = clockView;
         mOperatorNameViewOptional = operatorNameViewOptional;
         mDarkIconDispatcher = darkIconDispatcher;
-        mClockController = statusBarView.getClockController();
+        mClockController = statusBarViewController.getClockController();
 
         mView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
@@ -182,11 +180,8 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
     @Override
     protected void onViewAttached() {
         mHeadsUpManager.addListener(this);
-        mView.setOnDrawingRectChangedListener(
-                () -> updateIsolatedIconLocation(true /* requireUpdate */));
-        if (NotificationIconContainerRefactor.isEnabled()) {
-            updateIsolatedIconLocation(true);
-        }
+        mView.setOnDrawingRectChangedListener(this::updateIsolatedIconLocation);
+        updateIsolatedIconLocation();
         mWakeUpCoordinator.addListener(this);
         getShadeHeadsUpTracker().addTrackingHeadsUpListener(mSetTrackingHeadsUp);
         getShadeHeadsUpTracker().setHeadsUpAppearanceController(this);
@@ -202,9 +197,7 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
     protected void onViewDetached() {
         mHeadsUpManager.removeListener(this);
         mView.setOnDrawingRectChangedListener(null);
-        if (NotificationIconContainerRefactor.isEnabled()) {
-            mHeadsUpNotificationIconInteractor.setIsolatedIconLocation(null);
-        }
+        mHeadsUpNotificationIconInteractor.setIsolatedIconLocation(null);
         mWakeUpCoordinator.removeListener(this);
         getShadeHeadsUpTracker().removeTrackingHeadsUpListener(mSetTrackingHeadsUp);
         getShadeHeadsUpTracker().setHeadsUpAppearanceController(null);
@@ -212,14 +205,8 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
         mDarkIconDispatcher.removeDarkReceiver(this);
     }
 
-    private void updateIsolatedIconLocation(boolean requireStateUpdate) {
-        if (NotificationIconContainerRefactor.isEnabled()) {
-            mHeadsUpNotificationIconInteractor
-                    .setIsolatedIconLocation(mView.getIconDrawingRect());
-        } else {
-            mNotificationIconAreaController.setIsolatedIconLocation(
-                    mView.getIconDrawingRect(), requireStateUpdate);
-        }
+    private void updateIsolatedIconLocation() {
+        mHeadsUpNotificationIconInteractor.setIsolatedIconLocation(mView.getIconDrawingRect());
     }
 
     @Override
@@ -255,14 +242,8 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
                 setShown(true);
                 animateIsolation = !isExpanded();
             }
-            if (NotificationIconContainerRefactor.isEnabled()) {
-                mHeadsUpNotificationIconInteractor.setIsolatedIconNotificationKey(
-                        newEntry == null ? null : newEntry.getRepresentativeEntry().getKey());
-            } else {
-                updateIsolatedIconLocation(false /* requireUpdate */);
-                mNotificationIconAreaController.showIconIsolated(newEntry == null ? null
-                        : newEntry.getIcons().getStatusBarIcon(), animateIsolation);
-            }
+            mHeadsUpNotificationIconInteractor.setIsolatedIconNotificationKey(
+                    newEntry == null ? null : newEntry.getRepresentativeEntry().getKey());
         }
     }
 
